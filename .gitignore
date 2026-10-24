@@ -27,6 +27,7 @@ mobile_app/.packages
 *.aab
 *.dex
 *.class
+*.zip
 **/android/local.properties
 **/android/.gradle/
 **/android/app/build/
