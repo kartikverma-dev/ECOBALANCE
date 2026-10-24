@@ -1,0 +1,87 @@
+name: Build EcoBalance Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter Installation
+        run: flutter doctor -v
+
+      - name: Initialize Android Platform Scaffolding
+        working-directory: ./mobile_app
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Generating Android platform scaffolding..."
+            flutter create --platforms=android --org com.ecobalance .
+          fi
+
+      - name: Install Flutter Dependencies
+        working-directory: ./mobile_app
+        run: flutter pub get
+
+      - name: Build Android Release APK
+        working-directory: ./mobile_app
+        run: flutter build apk --release
+
+      - name: Upload Release APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EcoBalance-Release-APK
+          path: mobile_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Create GitHub Release (on main branch push)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0-${{ github.run_number }}
+          name: EcoBalance Mobile App v1.0.0 (Build ${{ github.run_number }})
+          body: |
+            ## 🌿 EcoBalance - Release APK Build
+            
+            **BCA Project - Eva Tomar (Roll No: 240935106093)**
+            **Institute of Management Studies Ghaziabad**
+            
+            ### Included Modules:
+            - **Module 1: My Impact** (Carbon Footprint & Eco Score)
+            - **Module 2: Energy & Solar** (Rooftop Solar, PM Surya Ghar subsidy & ROI)
+            - **Module 3: Money & Savings** (Utility expenditure tracking & savings simulator)
+            - **Module 4: Give Back to Nature** (Personalized action engine & Eco Points gamification)
+            - **Module 5: Analytics & ML Forecast** (Linear Regression next-month electricity prediction)
+            
+            ### How to Install:
+            1. Download the `app-release.apk` below directly to your Android device.
+            2. Tap to install (enable "Install from unknown sources" if prompted).
+            3. Launch EcoBalance!
+          files: mobile_app/build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
